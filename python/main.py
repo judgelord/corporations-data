@@ -2,7 +2,7 @@ from pathlib import Path
 import pandas as pd
 
 def load_data(file_path):
-    """Load data from a CSV file into a pandas DataFrame."""
+    """Load data from CSV files into a pandas DataFrame."""
     try:
         data = pd.read_csv(file_path)
         return data
@@ -31,4 +31,4 @@ def main():
             print(f"Failed to load data from {file_name}.")
 
 if __name__ == "__main__":
-    main()
+    main() 
