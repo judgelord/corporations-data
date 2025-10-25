@@ -3,6 +3,7 @@ import pandas as pd
 
 def load_data(file_path):
     """Load data from CSV files into a pandas DataFrame."""
+    # Wrap in try-except to handle potential file read errors
     try:
         data = pd.read_csv(file_path)
         return data
