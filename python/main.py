@@ -17,7 +17,7 @@ def load_data(file_path):
         return None
     
 def main():
-    file_names = ['CIK.csv', 'compustat_clean.csv', 'FDIC_clean.csv', 'SEC_Institutions.csv']  # Add other file names as needed
+    file_names = ['CIK.csv', 'compustat_clean.csv', 'FDIC_clean.csv', 'SEC_Institutions.csv', 'CompustatNames.csv']  # Add other file names as needed
     for file_name in file_names:
         current_dir = Path(__file__).parent
         file_path = current_dir / '..' / 'data' / file_name
