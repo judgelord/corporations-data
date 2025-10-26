@@ -170,3 +170,16 @@ sec_df['std_name'] = sec_df['Name'].apply(clean_fin_org_names)
 cik_df['std_name'] = cik_df['company_name'].apply(clean_fin_org_names)
 
 print(cik_df[['company_name', 'std_name']].head(10))
+print(sec_df[['Name', 'std_name']].head(10))
+#print(compustat_df.shape)
+
+# compustat_keys = compustat_df[['std_name', 'tic', 'cusip']].drop_duplicates()
+# #print(compustat_keys.shape)
+# fdic_keys = fdic_df[['std_name', 'FED_RSSD']].drop_duplicates()
+# sec_keys = sec_df[['std_name', 'CIK']].drop_duplicates()
+# cik_keys = cik_df[['std_name', 'cik']].drop_duplicates()
+# print(sec_keys.head(10))
+
+# # Merge CIK and SEC first based on std_name
+# sec_cik_merged = pd.merge(sec_keys, cik_keys, on='std_name', how='outer', suffixes=('_sec', '_cik'))
+# print(f"SEC-CIK merged: {sec_cik_merged.head(10)}")
