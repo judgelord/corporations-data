@@ -1,6 +1,9 @@
 import pandas as pd
 import re
 import nltk
+import os
+from pathlib import Path
+
 
 
 unc_remove_re = re.compile(r'\W+')
@@ -150,6 +153,20 @@ def clean_fin_org_names(name):
         name = re.sub(stopword_re, '', name.lower())
         
         return corpHash(name)
-    
-compustat_df = pd.read_csv('../data/compustat_clean.csv')
-compustat_df
+
+current_dir = Path(__file__).parent
+data_dir = current_dir / '..' / 'data'
+data_dir = data_dir.resolve()
+
+compustat_df = pd.read_csv(data_dir / 'CompustatNames.csv')
+cik_df = pd.read_csv(data_dir / 'CIK.csv')
+fdic_df = pd.read_csv(data_dir / 'FDIC_clean.csv')
+sec_df = pd.read_csv(data_dir / 'SEC_Institutions.csv')
+
+# cleaning and standardizing organization names
+compustat_df['std_name'] = compustat_df['conm'].apply(clean_fin_org_names)
+fdic_df['std_name'] = fdic_df['NAME'].apply(clean_fin_org_names)
+sec_df['std_name'] = sec_df['Name'].apply(clean_fin_org_names)
+cik_df['std_name'] = cik_df['company_name'].apply(clean_fin_org_names)
+
+print(cik_df[['company_name', 'std_name']].head(10))
