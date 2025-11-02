@@ -5,9 +5,6 @@ import os
 from pathlib import Path
 
 # uses Levenshtein Distance
-import fuzzywuzzy 
-
-
 
 unc_remove_re = re.compile(r'\W+')
 corp_re = re.compile('( (group|holding(s)?( co)?|inc(orporated)?|ltd|l ?l? ?[cp]|co(rp(oration)?|mpany)?|s[ae]|plc))+$')
