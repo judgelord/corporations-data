@@ -1,1 +1,3 @@
-Python code to create a unique key between data sets to merge corporation data. 
+This python script aims to create a process for standardizing raw organizational names to improve entity matching and create a large crosswalk of multiple datasets. By cleaning names with regular expressions, the work can eliminate common noise, legal suffixes, and formatting inconsistencies while preserving the unique identifiers of the entity.
+
+The primary goal of the standardization functions (basicHash, corpHash, and clean_fin_org_names) is to reduce variations of the same name to a single, consistent key (e.g., "Apple Inc." and "The Apple Corporation" both become "apple").
