@@ -1,3 +1,28 @@
-This python script aims to create a process for standardizing raw organizational names to improve entity matching and create a large crosswalk of multiple datasets. By cleaning names with regular expressions, the work can eliminate common noise, legal suffixes, and formatting inconsistencies while preserving the unique identifiers of the entity.
+# Organization Name Standardization Process
 
-The primary goal of the standardization functions (basicHash, corpHash, and clean_fin_org_names) is to reduce variations of the same name to a single, consistent key (e.g., "Apple Inc." and "The Apple Corporation" both become "apple").
+## Overview
+This Python project develops a process for **standardizing raw organizational names** to improve **entity matching** across multiple datasets. By using a combination of **string cleaning**, **regular expressions**, and **hashing functions**, the goal is to create a large **crosswalk table**
+
+The work is currently implemented and tested within a **Jupyter notebook** for simplied use
+> Note: This notebook is still under development. Several functions and matching methods need refinement and expansion.
+
+---
+
+## Objectives
+- Clean and normalize raw organization names from various datasets.
+- Eliminate common textual noise, legal suffixes, punctuation, and inconsistent capitalization.
+- Map variations of the same organization to a single standardized key.
+- Create a crosswalk table that aligns entities across multiple datasets. (canonical key, raw name, column for each of the source data sets)
+
+## To-Do List
+
+- [ ] **Implement fuzzy matching**  
+  - Use libraries such as `fuzzywuzzy` or `rapidfuzz` to handle near-duplicate names.  
+
+- [ ] **Check for duplicates**  
+  - Identify and remove duplicate standardized names after cleaning.  
+
+- [ ] **Testing and validation**  
+  - Create test cases for all cleaning functions (`basicHash`, `corpHash`, `clean_fin_org_names`).  
+  - Verify edge cases of names with special characters, multiple suffixes, etc.  
+  - Evaluate performance and accuracy of the cleaning + fuzzy matching.  
