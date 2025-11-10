@@ -26,3 +26,11 @@ The work is currently implemented and tested within a **Jupyter notebook** for s
   - Create test cases for all cleaning functions (`basicHash`, `corpHash`, `clean_fin_org_names`)
   - Verify edge cases of names with special characters, multiple suffixes, etc
   - Evaluate performance and accuracy of the cleaning + fuzzy matching
+
+## requirements.txt
+
+The requirements.txt file contains a list of all Python packages required for this project. 
+To install all dependencies, run: 
+`pip install -r requirements.txt`
+Or use the automated installation script:
+`./install_dependencies.sh`
