@@ -30,7 +30,7 @@ The work is currently implemented and tested within a **Jupyter notebook** for s
 ## requirements.txt
 
 The requirements.txt file contains a list of all Python packages required for this project. 
-To install all dependencies, run: 
-`pip install -r requirements.txt`
-Or use the automated installation script:
-`./install_dependencies.sh`
+To install all dependencies, run: \
+`pip install -r requirements.txt` \
+Or use the automated installation script: \ 
+`./install_dependencies.sh` \
