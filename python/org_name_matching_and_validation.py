@@ -2,7 +2,7 @@
 # coding: utf-8
 
 import math
-from tqdm.auto import tqdm
+from tqdm import tqdm
 import nltk
 from nltk.corpus import stopwords
 import ssl
@@ -18,13 +18,14 @@ import pandas as pd
 from datetime import datetime
 import pickle
 import re
-from fastDamerauLevenshtein import damerauLevenshtein
+from pyxdameraulevenshtein import damerau_levenshtein_distance
 import apsw
 import sys
 import numpy as np
 import corp_simplify_utils
 import seaborn as sns
 import matplotlib.pyplot as plt
+import pyreadr
 from collections import Counter
 
 # nlp
@@ -50,6 +51,7 @@ from matplotlib import cm
 from datetime import date
 today_for_filenames = date.today()
 curr_date = str(today_for_filenames.strftime("%Y%m%d"))
+
 
 NUMBER_OF_MATCHES_TO_RECORD = 10
 punc_remove_re = re.compile(r'\W+')
@@ -82,16 +84,23 @@ STOPWORDS.remove("re")
 STOPWORDS.remove("ve")
 STOPWORDS.remove("y")
 
+#compile regex patterns to reuse
+STOPWORD_RE = re.compile(r'\b(the|of|and|in|on)\b', re.IGNORECASE)
+CORP_SUFFIX_RE = re.compile(r'\b(inc|corp|ltd|llc|plc|co|company|limited)\b', re.IGNORECASE)
+PDF_PATTERN_RE = re.compile(r'\s[0-9]*\s[km]b\s*pdf', re.IGNORECASE)
+PUNCT_RE = re.compile(r'[^\w\s-]')  # match punctuation
+MULTISPACE_RE = re.compile(r'\s+')
+
 stopword_re_str = r""
 for word in STOPWORDS:
 	stopword_re_str += r'\b' + word + r'\b|'
 stopword_re = re.compile(stopword_re_str[:-1]) # The negative 1 is for the fencepost |
 
-BASE_DIR = "/Users/jameschen/Team Name Dropbox/James Chen/FINREGRULEMAKE2/finreg/"
+BASE_DIR = "/Users/aawesomez/Documents/UROP/NLP-regextable/"
 # BASE_DIR = "/Users/jameschen/Team Name Dropbox/James Chen/JLW-FINREG-PARTICIPATION/"
 # BASE_DIR = "/Users/jameschen/Documents/Code/JLW-FINREG-PARTICIPATION/"
 # DB_PATH = BASE_DIR + "data/master.sqlite"
-DB_PATH = BASE_DIR[:-7] + "Data/master.sqlite"
+DB_PATH = BASE_DIR + "Data/master.sqlite"
 # LAST_SAVE_DATASET_DATE = "20210824"
 LAST_SAVE_DATASET_DATE = "20220402" # Needs to be set to the last date the 'rebuild datasets' part of this code was run
 
@@ -192,19 +201,27 @@ def corpHash(s):
     return s
 
 # function to clean org names
-def clean_fin_org_names(name):
+def clean_fin_org_names(name: str) -> str:
     if name is None or not isinstance(name, str) or name == "NA":
         return ""
-    else:
-        # James strip metadata from name
-        name = name.split(',')[0]
-        name = re.sub(" [0-9]* [k|m]b pdf","",name)
+    
+    # James strip metadata from name
+    name = name.split(',')[0]
+    #Remove patterns like "10 kb pdf"
+    name = PDF_PATTERN_RE.sub("", name)
 
-        name = name.translate(corp_simplify_utils.STR_TABLE)
-        name = re.sub(stopword_re, '', name.lower())
-        
-        
-        return corpHash(name)
+    #Unicode and punctuation cleanup
+    name = corp_simplify_utils.normalize_unicode(name)
+    name = PUNCT_RE.sub(" ", name)
+
+    #Remove corporate suffixes and stopwords
+    name = CORP_SUFFIX_RE.sub("", name)
+    name = STOPWORD_RE.sub("", name)
+
+    #Normalize spacing and lowercase
+    name = MULTISPACE_RE.sub(" ", name).strip().lower()
+
+    return name
 
 
 # Function for organizing the covariates available for each of the gathered datasets
@@ -315,6 +332,14 @@ def get_quantile_by_variable(df, ascending_sort_var, ascending_quantile_start, a
     return quantile_df[vars_to_describe]
 
 def get_match_candidate_score(frequency_dict, org_name, candidate_match_name):
+    if not isinstance(org_name, str):
+        org_name = ""
+    if not isinstance(candidate_match_name, str):
+        candidate_match_name = ""
+    
+    if not org_name or not candidate_match_name:
+        return 0.0
+    
     org_tokens = org_name.split(' ')
     
     # tokenize the candidate match
@@ -410,47 +435,64 @@ if REBUILD_DATSETS:
         org_name_df['org_name'] = org_name_df['org_name'].apply(clean_fin_org_names)
 
 
+    rdata_path = BASE_DIR + "data/org_counts.RData"
+
+    print(f"Loading organization counts from: {rdata_path}")
 
 
-    # 1.2: Read and clean submitter and org names from scraped comments
-    connection=apsw.Connection(DB_PATH)
-    c=connection.cursor()
+    try:
+        rdata_results = pyreadr.read_r(rdata_path)
+        df = rdata_results[list(rdata_results.keys())[0]].copy()
+    except Exception as e:
+        print(f"Error loading RData file: {e}. Ensure pyreadr is installed and the path is correct.")
+        sys.exit(1)
+# --- END: Load RData Block ---
 
-    c.execute("SELECT * FROM comments")
-    key_names_list = c.fetchall()
+# 1. Clean and standardize the DataFrame to match the format expected by the rest of the script.
 
-    c.execute("PRAGMA table_info(comments);")
-    column_names = [row[1] for row in c.fetchall()]
+# Check the columns in the RData file and rename them to match the script's expected columns:
+try:
+    if 'org_name' in df.columns:
+        df.rename(columns={'org_name': 'organization'}, inplace=True)
+    else:
+        print("Error: RData file does not contain the expected 'org_name' column.")
 
-    print("Starting cleaning")
-    df = pd.DataFrame(key_names_list, columns = column_names)
-    cols = ['comment_url', 'submitter_name', 'organization', 'agency_acronym', 'docket_id', 'comment_title']
+    df['comment_url'] = ""
+except Exception as e:
+    print(f"Error loading RData file: {e}. Ensure pyreadr is installed and the path is correct.")
+    sys.exit(1)
 
-    df = df[cols]
-    df['original_organization_name'] = df['organization']
+df['submitter_name'] = ""
+df['agency_acronym'] = "RDATA" # Placeholder
+df['docket_id'] = ""
+df['comment_title'] = ""
 
-    # FRS, take what is before first comma
-    df.loc[df['agency_acronym']=='FRS', "organization"] = df.loc[df['agency_acronym']=='FRS', "organization"].str.split(',').map(lambda x: x[0]).map(lambda x: '' if '(' in x else x)
+# Select only the columns the script expects later
+cols = ['comment_url', 'submitter_name', 'organization', 'agency_acronym', 'docket_id', 'comment_title']
+df = df[cols]
 
-    # FDIC take before first comma, before with, and before -
-    df.loc[df['agency_acronym']=='FDIC', "organization"] = df.loc[df['agency_acronym']=='FDIC', "organization"].str.split(',').map(lambda x: x[0] if x else '')
-    df.loc[df['agency_acronym']=='FDIC', "organization"] = df.loc[df['agency_acronym']=='FDIC', "organization"].str.split(' with ').map(lambda x: x[1] if len(x)>1 else x[0])
-    df.loc[df['agency_acronym']=='FDIC', "organization"] = df.loc[df['agency_acronym']=='FDIC', "organization"].str.split(' - ').map(lambda x: x[0] if x else '')
+df['original_organization_name'] = df['organization']
 
-    # SEC is difficult
-    df['submitter_name'] = df['submitter_name'].map(clean_fin_org_names)
-    df['organization'] = df['organization'].map(clean_fin_org_names)
+# The following cleaning lines should be kept to ensure consistency, 
+# even if the RData data is already partially clean.
+# FRS, FDIC, SEC cleaning blocks are skipped for the RData sample.
 
-    #replace none
-    df.loc[df['submitter_name'].isna(), "submitter_name"] = ''
+# Clean the names using your function
+df['submitter_name'] = df['submitter_name'].map(clean_fin_org_names)
+df['organization'] = df['organization'].map(clean_fin_org_names)
 
-    key_names_list = df.iloc[:,:] # include how many to match
-    # key_names_list = [(elem[0], clean_fin_org_names(elem[1]), clean_fin_org_names(elem[2]), elem[3], elem[4], elem[5]) for elem in key_names_list]
+# replace none
+df.loc[df['submitter_name'].isna(), "submitter_name"] = ''
+
+key_names_list = df.iloc[:,:] # This DataFrame is now your list of organizations to match
+
+print("Finished cleaning with RData source.")
+
     
 
 
     # Make a (slightly) educated guess as to the submitter_name and organization for the Fed
-    """
+"""
     new_key_names_list = []
     for elem in key_names_list:
         submitter_name = elem[1]
@@ -478,7 +520,7 @@ if REBUILD_DATSETS:
 
     key_names_list = new_key_names_list
     """
-    print("Finished cleaning")
+print("Finished cleaning")
 
 
     # 1.3: Create 2 dicts with frequency counts of every token in the org and submitter name fields of the scraped comments db
@@ -491,29 +533,35 @@ if REBUILD_DATSETS:
     #             org_frequency_dict[token] += 1
     #         else:
     #             org_frequency_dict[token] = 1
-    print('Preparing candidate frequency dictionary.')
-    candidate_frequency_dict = {}
-    for org_name in tqdm(org_name_df['org_name']):
-        for token in org_name.split(" "):
-            if token in candidate_frequency_dict:
-                candidate_frequency_dict[token] += 1
-            else:
-                candidate_frequency_dict[token] = 1
 
-    # Create linking dataset
-    # 1.4: Create a dict mapping from tokens in the gathered org datasets to IDs and org_names that contain that token
-    candidate_match_dict = {}
-    print('Preparing candidate match dictionary.')
-    for row_idx in tqdm(range(len(org_name_df))):
-        row = org_name_df.iloc[row_idx]
-        unique_id = row['unique_id']
-        org_name = row['org_name']
-        original_org_name = row['original_org_name']
-        for token in org_name.split(" "):
-            if token in candidate_match_dict:
-                candidate_match_dict[token].append((unique_id, org_name, original_org_name))
-            else:
-                candidate_match_dict[token] = [(unique_id, org_name, original_org_name)]
+
+
+from collections import Counter
+from tqdm.auto import tqdm # Keep tqdm if you want a progress bar on the split operation
+tqdm.pandas()
+print('Preparing candidate frequency dictionary (Vectorized).')
+# 1. Split every string in the Series into a list of tokens.
+token_lists = org_name_df['org_name'].progress_apply(lambda x: x.split(" "))
+
+# 2. Flatten the list of lists into a single list of all tokens.
+all_tokens = [token for sublist in token_lists for token in sublist]
+
+# 3. Use Counter for fast, efficient frequency counting.
+candidate_frequency_dict = Counter(all_tokens)
+# Create linking dataset
+# 1.4: Create a dict mapping from tokens in the gathered org datasets to IDs and org_names that contain that token
+candidate_match_dict = {}
+print('Preparing candidate match dictionary.')
+for row_idx in tqdm(range(len(org_name_df))):
+    row = org_name_df.iloc[row_idx]
+    unique_id = row['unique_id']
+    org_name = row['org_name']
+    original_org_name = row['original_org_name']
+    for token in org_name.split(" "):
+        if token in candidate_match_dict:
+            candidate_match_dict[token].append((unique_id, org_name, original_org_name))
+        else:
+            candidate_match_dict[token] = [(unique_id, org_name, original_org_name)]
                 
 
     # Apply linking dataset
@@ -794,13 +842,21 @@ if REBUILD_DATSETS:
     df = pd.read_csv(BASE_DIR + "data/match_data/match_all_covariates_df_" + curr_date + ".csv")
     df = df.drop("Unnamed: 0", axis=1)
 
+    #isolating low scores
+    score_cols = list(filter(lambda x: "score" in x, df.columns))
+    df['max_match_score'] = df[score_cols].max(axis = 1)
+    low_threshold = 0.70
+    df_low_scores = df[df['max_match_score'] < low_threshold].copy()
+    df_low_scores = df_low_scores.head(1000)
+    df = df_low_scores
+
     threshold = 0.95
 
     score_cols = list(filter(lambda x: "score" in x,df.columns))
     for score_col in score_cols:
         threshold_fail = df[score_col]<threshold
         all_cols = list(filter(lambda x: score_col.split(':')[0] in x,df.columns))
-        df.loc[threshold_fail, all_cols] = np.NaN
+        df.loc[threshold_fail, all_cols] = np.nan
 
 
     name_cols = list(filter(lambda x: "best_match_name" in x,df.columns))
@@ -827,7 +883,5 @@ if REBUILD_DATSETS:
     
     df = df[cols]
 
-    df.to_csv(BASE_DIR + "data/match_data/match_df_" + curr_date + ".csv")
-
-
+    df.to_csv(BASE_DIR + f"data/match_data/validation_low_score_sample_below_{int(low_threshold*100)}_{curr_date}.csv")
        

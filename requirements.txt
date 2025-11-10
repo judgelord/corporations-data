@@ -1,0 +1,30 @@
+# Core data science packages
+pandas
+numpy
+scipy
+matplotlib
+seaborn
+
+# NLP packages
+nltk
+spacy
+
+# Fuzzy matching packages
+pyxdameraulevenshtein
+rapidfuzz
+
+# Statistical analysis
+statsmodels
+joypy
+
+# Database
+apsw
+
+# R data file reading
+pyreadr
+
+# Progress bars
+tqdm
+
+# Utility packages
+pickle-mixin
