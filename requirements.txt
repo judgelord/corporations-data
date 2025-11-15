@@ -12,6 +12,8 @@ spacy
 # Fuzzy matching packages
 pyxdameraulevenshtein
 rapidfuzz
+fuzzywuzzy
+python-levenshtein
 
 # Statistical analysis
 statsmodels
