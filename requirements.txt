@@ -14,6 +14,7 @@ pyxdameraulevenshtein
 rapidfuzz
 fuzzywuzzy
 python-levenshtein
+thefuzz
 
 # Statistical analysis
 statsmodels
