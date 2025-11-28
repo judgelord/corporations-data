@@ -19,7 +19,7 @@ from datetime import datetime
 import pickle
 import re
 from pyxdameraulevenshtein import damerau_levenshtein_distance
-# import apsw
+import apsw
 import sys
 import numpy as np
 import corp_simplify_utils
@@ -95,6 +95,18 @@ stopword_re_str = r""
 for word in STOPWORDS:
 	stopword_re_str += r'\b' + word + r'\b|'
 stopword_re = re.compile(stopword_re_str[:-1]) # The negative 1 is for the fencepost |
+
+NON_FINANCIAL_ORG_TERMS = [
+    'university', 'college', 'school', 'institute', 'academy', 
+    'hospital', 'medical center', 'health system', 'center', 
+    'commission', 'authority', 'association', 'society', 
+    'foundation', 'transportation services', 'district', 
+    'chamber', 'commerce', 'library', 'museum', 'public', 
+    'city', 'county', 'town', 'government', 'state', 'federal',
+    'ministry', 'department', 'office'
+]
+
+NON_FINANCIAL_RE = re.compile(r'\b(' + '|'.join(NON_FINANCIAL_ORG_TERMS) + r')\b', re.IGNORECASE)
 
 BASE_DIR = "/Users/aawesomez/Documents/UROP/NLP-regextable/"
 # BASE_DIR = "/Users/jameschen/Team Name Dropbox/James Chen/JLW-FINREG-PARTICIPATION/"
@@ -214,8 +226,9 @@ def clean_fin_org_names(name: str) -> str:
     name = corp_simplify_utils.normalize_unicode(name)
     name = PUNCT_RE.sub(" ", name)
 
-    #Remove corporate suffixes and stopwords
+    #Remove corporate suffixes and stopwords and non-financial entity
     name = CORP_SUFFIX_RE.sub("", name)
+    name = NON_FINANCIAL_RE.sub("", name)
     name = STOPWORD_RE.sub("", name)
 
     #Normalize spacing and lowercase
@@ -345,24 +358,49 @@ def get_match_candidate_score(frequency_dict, org_name, candidate_match_name):
     # tokenize the candidate match
     candidate_match_tokens = set(candidate_match_name.split(" "))
 
+    max_dist = 1
+
     # Calculate the match score
     total_inverse_frequency = 0
     total_matching_inverse_frequency = 0
     tokenized_name = org_tokens
     for token in tokenized_name:
         token_frequency = frequency_dict.get(token, 999999) # if token not found, give high frequency to ignore it
-        total_inverse_frequency += 1.0/token_frequency
-        if token in candidate_match_tokens:
-            total_matching_inverse_frequency += 1.0/token_frequency
-    match_score = total_matching_inverse_frequency / total_inverse_frequency
+        token_inverse_frequency = 1.0/token_frequency
+        total_inverse_frequency += token_inverse_frequency
 
-    # added by James
-    weight = 1/len(org_name)
-    longest_common_substring = get_longest_common_substring(org_name, candidate_match_name, len(org_name), len(candidate_match_name))
-    match_score -= weight * len(candidate_match_name)/len(longest_common_substring) - weight
+        best_token_similarity = 0.0
+        
+        for candidate_token in candidate_match_tokens:
+            if not token or not candidate_token:
+                continue
 
-    return match_score
+            dist = damerau_levenshtein_distance(token, candidate_token)
 
+            if dist <= max_dist:
+                max_len = max(len(token), len(candidate_token))
+                if max_len == 0: continue
+                similarity = 1.0 - (dist / max_len)
+
+                best_token_similarity = max(best_token_similarity, similarity)
+        if best_token_similarity > 0.0:
+            total_matching_inverse_frequency += token_inverse_frequency * best_token_similarity
+    
+    try:
+        match_score = total_matching_inverse_frequency / total_inverse_frequency
+    except ZeroDivisionError:
+        match_score = 0.0
+
+    #Multiplicative DL Penalty
+    m = len(org_name)
+    n = len(candidate_match_name)
+    if m == 0 or n == 0: return 0.0
+
+    dl_distance = damerau_levenshtein_distance(org_name, candidate_match_name)
+    normalized_dl = dl_distance / max(m, n)
+
+    final_score = match_score * (1 - normalized_dl)
+    return max(0.0, final_score)
 
 
 REBUILD_DATSETS = True
@@ -843,32 +881,31 @@ for row_idx in tqdm(range(len(org_name_df))):
     df = df.drop("Unnamed: 0", axis=1)
 
     #isolating low scores
-    score_cols = list(filter(lambda x: "score" in x, df.columns))
-    df['max_match_score'] = df[score_cols].max(axis = 1)
-    low_threshold = 0.70
-    df_low_scores = df[df['max_match_score'] < low_threshold].copy()
-    df_low_scores = df_low_scores.head(1000)
-    df = df_low_scores
+    score_cols = [col for col in df.columns if "best_match_score" in col]
+    df['max_match_score'] = df[score_cols].fillna(-100).max(axis = 1)
+   
+    LOWER_BOUND = 0.50
+    UPPER_BOUND = 0.60
+    
+    # Filter for scores in the moderate range and ensures the score is positive
+    filter_condition = (df['max_match_score'] > LOWER_BOUND) & \
+                       (df['max_match_score'] < UPPER_BOUND) & \
+                       (df['max_match_score'] > 0)
+    
+    df = df[filter_condition].copy()
+    
+    print(f"Filtered DataFrame down to {len(df)} records (0.80 < score < 0.90).")
 
-    threshold = 0.95
-
-    score_cols = list(filter(lambda x: "score" in x,df.columns))
-    for score_col in score_cols:
-        threshold_fail = df[score_col]<threshold
-        all_cols = list(filter(lambda x: score_col.split(':')[0] in x,df.columns))
-        df.loc[threshold_fail, all_cols] = np.nan
-
-
+    #Add Exact Match column
     name_cols = list(filter(lambda x: "best_match_name" in x,df.columns))
     exact_matches = pd.DataFrame()
     for name_col in name_cols:
         exact_matches[name_col] = df[name_col]==df['comment_org_name']
 
     new_col = (exact_matches.sum(axis=1)>0).astype(int)
-    df.insert(loc = 5,
-          column = 'exact_match_present',
-          value = new_col)
+    df['exact_match_present'] = new_col
     
+    #Reorder columns (Adjusted to include 'max_match_score' in the front)
     cols = list(df.columns)
     front = [
         'comment_agency',
@@ -878,10 +915,14 @@ for row_idx in tqdm(range(len(org_name_df))):
         'comment_org_name',
         'num_org_matches',
         'exact_match_present',
+        'max_match_score', 
         ]
-    cols[:len(front)]= front
     
-    df = df[cols]
+    # Recreate the final column list by ensuring the front columns are first
+    remaining_cols = [c for c in cols if c not in front]
+    df = df[front + remaining_cols]
 
-    df.to_csv(BASE_DIR + f"data/match_data/validation_low_score_sample_below_{int(low_threshold*100)}_{curr_date}.csv")
-       
+
+    final_filename = f"match_df_moderate_sample_{int(LOWER_BOUND*100)}_{int(UPPER_BOUND*100)}_" + curr_date + ".csv"
+    df.to_csv(BASE_DIR + "data/match_data/" + final_filename, index=False)
+    print(f"Saved moderate sample to: {final_filename}")
