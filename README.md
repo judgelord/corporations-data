@@ -38,7 +38,7 @@ The work is currently implemented and tested within a **Jupyter notebook** for s
 * The next step is to separate the remaining rows and use exact matches based on the cleaned std_name. This creates 14708 clusters based on std_name name. Then these exact matches begin merging with the CIK clusters. 
   * 759 existing clusters in the CIK crosswalk have the same std_name as the std_name cluster. 
   * Merging these gives up a crosswalk based on cleaned standardized names and CIK ids with 70709 rows/clusters. 
-  
+
 ```bash
 | cik      | standardized_names       | aliases                                                                      | sources       | match_type   |
 |:---------|:-------------------------|:-----------------------------------------------------------------------------|:--------------|:-------------|
@@ -46,13 +46,18 @@ The work is currently implemented and tested within a **Jupyter notebook** for s
 | [1800.0] | abbott laboratories      | ABBOTT LABORATORIES                                                          | compustat,cik | cik_cluster  |
 | [1841.0] | abel noser bd|abel noser | ABEL NOSER CORP                                         /BD|ABEL/NOSER CORP. | cik           | cik_cluster  |
 ```
-
+* The last steps involve separating the remaining unprocessed rows to a new dataframe that need to be matched through a scoring-based algorithm. 
+  * There are 728657 remaining entities that need to go through this
+  * Matching algorithms to choose from:
+    * get_match_candidate_score from the regextable-python repository
+    * RapidFuzz algorithms including JaoWinkler.similarity or fuzz.token_set_ratio
+* The workflow for matching has been implemented which uses a union-find object to create sets of high match scoring entities and then retrieving the information of entities through their indices in the dataframe of unproccesed entities. 
 
 
 ## To-Do List
 
-* [ ] **Implement fuzzy matching**  
-  * Use libraries such as `fuzzywuzzy` or `rapidfuzz` to handle near-duplicate names 
+* [ ] **Run the full program including fuzzy-matching**  
+  * There is currently a running time issue, as matching thousands of entities can take longer than a typical laptop can handle, so there needs to be improvements to time complexity or implement a logic for running the program in batches. 
 
 * [ ] **Check for duplicates**  
   * Identify and remove duplicate standardized names after cleaning
