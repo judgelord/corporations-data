@@ -40,11 +40,18 @@ The work is currently implemented and tested within a **Jupyter notebook** for s
   * Merging these gives up a crosswalk based on cleaned standardized names and CIK ids with 70709 rows/clusters. 
 
 ```bash
-| cik      | standardized_names       | aliases                                                                      | sources       | match_type   |
-|:---------|:-------------------------|:-----------------------------------------------------------------------------|:--------------|:-------------|
-| [1750.0] | aar                      | AAR CORP                                                                     | compustat,cik | cik_cluster  |
-| [1800.0] | abbott laboratories      | ABBOTT LABORATORIES                                                          | compustat,cik | cik_cluster  |
-| [1841.0] | abel noser bd|abel noser | ABEL NOSER CORP                                         /BD|ABEL/NOSER CORP. | cik           | cik_cluster  |
+| cik      | standardized_names                                                                           | aliases                                                                                                                          | sources       | match_type   | entity_id   |
+|:---------|:---------------------------------------------------------------------------------------------|:---------------------------------------------------------------------------------------------------------------------------------|:--------------|:-------------|:------------|
+| [1750.0] | aar                                                                                          | AAR CORP                                                                                                                         | compustat,cik | cik_cluster  | EN0000000   |
+| [1800.0] | abbott laboratories                                                                          | ABBOTT LABORATORIES                                                                                                              | compustat,cik | cik_cluster  | EN0000001   |
+| [1841.0] | abel noser bd|abel noser                                                                     | ABEL NOSER CORP                                         /BD|ABEL/NOSER CORP.                                                     | cik           | cik_cluster  | EN0000002   |
+| [1853.0] | aberdeen idaho mining|motivnation                                                            | ABERDEEN IDAHO MINING CO|MOTIVNATION, INC.                                                                                       | cik           | cik_cluster  | EN0000003   |
+| [1860.0] | thomson richard william bd|thomson                                                           | THOMSON RICHARD WILLIAM                                 /BD|THOMSON, RICHARD WILLIAM                                             | cik           | cik_cluster  | EN0000004   |
+| [1904.0] | abraham bd|abraham|abraham securities corporation                                            | ABRAHAM & CO INC                                        /BD|ABRAHAM & CO., INC.|ABRAHAM SECURITIES CORPORATION                   | cik           | cik_cluster  | EN0000005   |
+| [1918.0] | abrams|homeland securities financial services group|merchanthouse securities|wizer financial | ABRAMS, ALLAN EDWARD|HOMELAND SECURITIES FINANCIAL SERVICES GROUP, INC.|THE MERCHANTHOUSE SECURITIES, INC.|WIZER FINANCIAL. INC. | cik           | cik_cluster  | EN0000006   |
+| [1923.0] | servidyne|abrams industries                                                                  | SERVIDYNE INC|ABRAMS INDUSTRIES INC|SERVIDYNE, INC.                                                                              | compustat,cik | cik_cluster  | EN0000007   |
+| [1961.0] | worlds|academic computer systems|worlds com                                                  | WORLDS INC|ACADEMIC COMPUTER SYSTEMS INC|WORLDS COM INC|WORLDS.COM, INC.                                                         | compustat,cik | cik_cluster  | EN0000008   |
+| [2034.0] | aceto                                                                                        | ACETO CORP                                                                                                                       | compustat,cik | cik_cluster  | EN0000009   |
 ```
 * The last steps involve separating the remaining unprocessed rows to a new dataframe that need to be matched through a scoring-based algorithm. 
   * There are 728657 remaining entities that need to go through this
