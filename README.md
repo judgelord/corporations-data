@@ -9,23 +9,58 @@ The work is currently implemented and tested within a **Jupyter notebook** for s
 ---
 
 ## Objectives
-- Clean and normalize raw organization names from various datasets.
-- Eliminate common textual noise, legal suffixes, punctuation, and inconsistent capitalization
-- Map variations of the same organization to a single standardized key
-- Create a crosswalk table that aligns entities across multiple datasets (canonical key, raw name, column for each of the source data sets)
+* Clean and normalize raw organization names from various datasets.
+* Eliminate common textual noise, legal suffixes, punctuation, and inconsistent capitalization
+* Map variations of the same organization based on standardized names or other unique keys
+* Create a crosswalk table that aligns entities across multiple datasets (canonical key, raw name / aliases, sources, CIK ID, match type)
+  * CIK (Central Index Key) is one way we can automatically match entities. They are used on the Securities Exchange Commission's (SEC) computer systems to identify corporations and individual people who have filed disclosure with the SEC.
+
+## Information About the Datasets
+* CIK.csv
+  * 870051 entities
+  * Columns: "company_name", "cik"
+* SEC_Institutions.csv
+  * 13737 entities
+  * Columns: "CIK", "Ticker", "Name", "Exchange", "SIC", "Business", "Incorporated", "IRS"
+  * It has been tested that all the entities in SEC are already in CIK, so further matching wiht SEC can be stopped. 
+* compustat_clean.csv
+  * 19581 entities
+  * Columns: "gvkey", "conm", "tic", "cusip", "cik", "sic", "naics", "gsubind", "gind", "year1", "year2"
+* FDIC_clean.csv
+  * 25670 entities
+  * Columns: "NAME", "NAMEHCR", "STALP", "STNAME", "BKCLASS", "ASSET", "CERT", "FED_RSSD", "org_name", "commented", "Commented", "mean_ASSET", "median_ASSET", "mean_ASSET_type", "median_ASSET_type"
+
+## Current Progress
+* Created a dataframe of all the datasets merged together into all_names_df.
+  * 915289 entities
+  * Columns: "std_name" (this is the cleaned name), "raw_name", "cik", "source"
+* A crosswalk can be produced using the immediate matches from CIK IDs across the datasets. There are 133395 entities that match based on CIK IDs which ends up merging into 56760 rows in the dataframe. This leaves 781894 remaining rows to process
+* The next step is to separate the remaining rows and use exact matches based on the cleaned std_name. This creates 14708 clusters based on std_name name. Then these exact matches begin merging with the CIK clusters. 
+  * 759 existing clusters in the CIK crosswalk have the same std_name as the std_name cluster. 
+  * Merging these gives up a crosswalk based on cleaned standardized names and CIK ids with 70709 rows/clusters. 
+  
+```bash
+| cik      | standardized_names       | aliases                                                                      | sources       | match_type   |
+|:---------|:-------------------------|:-----------------------------------------------------------------------------|:--------------|:-------------|
+| [1750.0] | aar                      | AAR CORP                                                                     | compustat,cik | cik_cluster  |
+| [1800.0] | abbott laboratories      | ABBOTT LABORATORIES                                                          | compustat,cik | cik_cluster  |
+| [1841.0] | abel noser bd|abel noser | ABEL NOSER CORP                                         /BD|ABEL/NOSER CORP. | cik           | cik_cluster  |
+```
+
+
 
 ## To-Do List
 
-- [ ] **Implement fuzzy matching**  
-  - Use libraries such as `fuzzywuzzy` or `rapidfuzz` to handle near-duplicate names 
+* [ ] **Implement fuzzy matching**  
+  * Use libraries such as `fuzzywuzzy` or `rapidfuzz` to handle near-duplicate names 
 
-- [ ] **Check for duplicates**  
-  - Identify and remove duplicate standardized names after cleaning
+* [ ] **Check for duplicates**  
+  * Identify and remove duplicate standardized names after cleaning
 
-- [ ] **Testing and validation**  
-  - Create test cases for all cleaning functions (`basicHash`, `corpHash`, `clean_fin_org_names`)
-  - Verify edge cases of names with special characters, multiple suffixes, etc
-  - Evaluate performance and accuracy of the cleaning + fuzzy matching
+* [ ] **Testing and validation**  
+  * Create test cases for all cleaning functions (`basicHash`, `corpHash`, `clean_fin_org_names`)
+  * Verify edge cases of names with special characters, multiple suffixes, etc
+  * Evaluate performance and accuracy of the cleaning + fuzzy matching
 
 ## requirements.txt
 
