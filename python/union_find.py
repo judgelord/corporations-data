@@ -28,3 +28,4 @@ class UnionFind:
         # Make the representative of i's set
         # be the representative of j's set
         self.parent[irep] = jrep
+        
