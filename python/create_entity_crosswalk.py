@@ -26,6 +26,7 @@ compustat_df['std_name'] = compustat_df['conm'].apply(clean_fin_org_names)
 fdic_df['std_name'] = fdic_df['NAME'].apply(clean_fin_org_names)
 sec_df['std_name'] = sec_df['Name'].apply(clean_fin_org_names)
 cik_df['std_name'] = cik_df['company_name'].apply(clean_fin_org_names)
+print("Done creating standardized names")
 
 duplicates_cik_id = cik_df['cik'].duplicated(keep = False)
 duplicates_cik = cik_df[duplicates_cik_id]
@@ -71,6 +72,7 @@ enriched_cik_df = pd.DataFrame(confident_matches)
 print(f"cik_df reduced to {len(enriched_cik_df)} entities after merging.")
 
 final_crosswalk_df = pd.concat([final_crosswalk_df, enriched_cik_df])
+print("Added enriched cik_df to the final_crosswalk_df")
 
 temp_compustat_df = compustat_df[compustat_df['cik'].notna()].copy()
 
@@ -82,9 +84,9 @@ final_crosswalk_df.loc[:, 'cik'] = final_crosswalk_df['cik'].apply(clean_cik)
 # # Merge compustat_df into final_crosswalk_df based on cik id. 
 # Create a dataframe of entities that were not merged called remaining_compustat_df 
 final_crosswalk_df = final_crosswalk_df.merge(temp_compustat_df, on = 'cik', how = 'left', suffixes=('','_other'), indicator=True)
+print("Successfully merged compustat into final_crosswalk_df based on cik id")
 
 # Clean up final_crosswalk_df
-
 mask = final_crosswalk_df['_merge'] == 'both'
 
 # add new std_name
@@ -110,7 +112,7 @@ final_crosswalk_df.loc[mask, 'sources'] = (
     final_crosswalk_df.loc[mask, 'sources']
     .fillna('')
     .where(
-        final_crosswalk_df.loc[mask, 'sources'].isna(),
+        final_crosswalk_df.loc[mask, 'sources'] == '',
         final_crosswalk_df.loc[mask, 'sources'] + ','
     )
     + 'compustat'
@@ -134,11 +136,13 @@ rejected_compustat_df = rejected_compustat_df.drop(columns = ['Unnamed: 0', 'gvk
 rejected_compustat_df = rejected_compustat_df.rename(columns={'std_name': 'standardized_names', 'conm': 'aliases'})
 rejected_compustat_df['sources'] = 'compustat'
 
+print("Adding remaining of compustat into final_crosswalk_df ")
 final_crosswalk_df = pd.concat([final_crosswalk_df, rejected_compustat_df], axis = 0, ignore_index=True)
 
 # Merge entities in fdic based on FED_RSSD values with itself to remove duplicates. 
 # New df called enriched_fdic_df
-
+print("Merging entities in fdic based on FED_RSSD values with itself to remove duplicates...")
+print(f"original length of fdic: {len(fdic_df)}")
 grouped_by_FED_RSSD = fdic_df.groupby('FED_RSSD')
 confident_matches = []
 # count = 0
@@ -170,7 +174,7 @@ for FED_RSSD_value, group in grouped_by_FED_RSSD:
          
 pd.set_option('display.max_colwidth', None)
 enriched_fdic_df = pd.DataFrame(confident_matches)
-print(f"fdic_df reduced to {len(enriched_cik_df)} entities after merging.")
+print(f"fdic_df reduced to {len(enriched_fdic_df)} entities after merging.")
 
 # Checking to see which entities in fdic are qualified to be matched 
 # based on an exact standardized_name match. Standardized names with more than 
@@ -179,7 +183,7 @@ print(f"fdic_df reduced to {len(enriched_cik_df)} entities after merging.")
 # in final_crosswalk_df when we know they are different because they have different 
 # FED_RSSD ids. This goes the same for final_crosswalk_df if there are multiple standardized
 # names for one entity. 
-
+print("Identifying entities qualified for exact standardized name matching based...")
 final_crosswalk_df_exploded = (
     final_crosswalk_df.assign(standardized_names = final_crosswalk_df['standardized_names'].str.split('|'))
     .explode('standardized_names')  
@@ -218,6 +222,7 @@ qualified_for_standardized_names_matching__fdic_exploded = qualified_for_standar
 )
 
 # Merging...
+print("Merging into final_crosswalk_df...")
 merged = qualified_for_standardized_names_matching_final_exploded.merge(
     qualified_for_standardized_names_matching__fdic_exploded,
     on='standardized_names',
@@ -244,7 +249,7 @@ merged.loc[mask, 'sources'] = (
     merged.loc[mask, 'sources']
     .fillna('')
     .where(
-        merged.loc[mask, 'sources'].isna(),
+        merged.loc[mask, 'sources'] == '',
         merged.loc[mask, 'sources'] + ','
     )
     + 'fdic'
@@ -259,19 +264,19 @@ merged.loc[mask, 'matching_type'] = (
     merged.loc[mask, 'matching_type']
     .fillna('')
     .where(
-        merged.loc[mask, 'matching_type'].isna(),
+        merged.loc[mask, 'matching_type'] == '',
         merged.loc[mask, 'matching_type'] + ','
     )
-    + merged.loc[mask, 'df2_matching_type'].fillna('') + 'standardized_name_matching'
+    + merged.loc[mask, 'df2_matching_type'].fillna('') + ',' + 'standardized_name_matching'
 )
 
 merged = merged.drop(columns=['df2_FED_RSSD','df2_aliases', 'df2_sources', 'df2_matching_type', 'exploded_index', 'exploded_index_df2', '_merge'])
+print("Sucessfully merged based on exact standardized names")
 
 # Identify the remaining entities from fdic that were not merged to be fuzzy matched
+print("Identifying the remaining qualified entities from fdic that were not merged to be fuzzy matched")
 qualified_for_fuzzy_matching = qualified_for_standardized_names_matching__fdic_exploded[\
     ~qualified_for_standardized_names_matching__fdic_exploded['standardized_names'].isin(merged['standardized_names'])].reset_index(drop = True) 
-
-
 
 # Create a testing mode to sample data for faster fuzzy matching
 TESTING_MODE = True
@@ -314,12 +319,12 @@ for idx, row in merged.iterrows():
         crosswalk_idx_list.append(idx)
 
 # Now go through qualified_for_fuzzy_matching
-count = 0
-print('beginning matching')
+# count = 0
+print('beginning fuzzy matching')
 for i, new_row in qualified_for_fuzzy_matching.iterrows():
-    count += 1 
-    if count % 50 == 0:
-        print(count)
+    # count += 1 
+    # if count % 50 == 0:
+    #     print(count)
     
     new_alias = new_row['df2_aliases']
     # Find best matches with threshold 90
@@ -355,14 +360,32 @@ for i, new_row in qualified_for_fuzzy_matching.iterrows():
 
         val_source = merged.at[idx, 'sources']
         merged.at[idx, 'sources'] = (
-            ("" if pd.isna(val_source) else val_source + ',') + 'fdic'
+            ("" if pd.isna(val_source) or val_source == '' else val_source + ',') + 'fdic'
         )
         val_matching_type = merged.at[idx, 'matching_type']
         merged.at[idx, 'matching_type'] = (
-            ("" if pd.isna(val_matching_type) else val_matching_type + ',') + 'fuzzy_matching'
+            ("" if pd.isna(val_matching_type) or val_matching_type == '' else val_matching_type + ',') + 'fuzzy_matching'
         )
         # Append fuzzy score to the column
         merged.at[idx, 'fuzzy_matching_score'].append(score)
+print("Finished fuzzy matching")
+        
+merged['FED_RSSD'] = (
+    merged['FED_RSSD']
+    .str[0]
+    .astype('Int64')   # pandas nullable integer
+)
 
+enriched_fdic_df['FED_RSSD'] = (
+    enriched_fdic_df['FED_RSSD']
+    .str[0]
+    .astype('Int64')   
+)
+
+print("Adding entities that were not matched from fdic into final_crosswalk_df")
 remaining_fdic_df = enriched_fdic_df[~enriched_fdic_df['FED_RSSD'].isin(merged['FED_RSSD'])]
 final_crosswalk_df = pd.concat([merged, remaining_fdic_df], ignore_index=True)
+
+print("Exporting final_crosswalk_df into a csv file")
+final_crosswalk_df.to_csv(data_dir / 'final_crosswalk.csv', index=False)
+print("CROSSWALK CREATION COMPLETE")
