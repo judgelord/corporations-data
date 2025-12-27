@@ -235,3 +235,32 @@ def clean_fin_org_names(name: str) -> str:
     name = MULTISPACE_RE.sub(" ", name).strip().lower()
 
     return name
+
+
+def normalize_to_list(x):
+    if pd.isna(x):
+        return []
+    if isinstance(x, list):
+        return [int(i) for i in x]  # convert to int
+    return [int(x)]
+
+
+# This function is used to clean the cik values into a string,
+# so that the merge function can be properly called. 
+def clean_cik(value):
+    # If it's a list, take the first element
+    if isinstance(value, list):
+        if len(value) > 0:
+            value = value[0]
+        else:
+            return ""
+    
+    # If it's null, return an empty string
+    if pd.isna(value) or value == "":
+        return ""
+    
+    # Convert the value to float, then int, then string to remove the '.0'
+    try:
+        return str(int(float(value)))
+    except (ValueError, TypeError):
+        return str(value)
