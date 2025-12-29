@@ -408,7 +408,7 @@ print("Finished fuzzy matching")
 merged['FED_RSSD'] = (
     merged['FED_RSSD']
     .str[0]
-    .astype('Int64')   # pandas nullable integer
+    .astype('Int64') 
 )
 
 enriched_fdic_df['FED_RSSD'] = (

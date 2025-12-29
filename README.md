@@ -3,8 +3,8 @@
 ## Overview
 This Python project develops a process for **standardizing raw organizational names** to improve **entity matching** across multiple datasets. By using a combination of **string cleaning**, **regular expressions**, and **hashing functions**, the goal is to create a large **crosswalk table**
 
-The work is currently implemented and tested within a **Jupyter notebook** for simplied use
-> Note: This notebook is still under development. Several functions and matching methods need refinement and expansion
+The work is implemented and tested within a **Jupyter notebook** for simplied use. The full script can also be run in a .py file. 
+> Note: This python script is currently under version 1 of development. There could be errors around false matches, etc. 
 
 ---
 
@@ -12,8 +12,9 @@ The work is currently implemented and tested within a **Jupyter notebook** for s
 * Clean and normalize raw organization names from various datasets.
 * Eliminate common textual noise, legal suffixes, punctuation, and inconsistent capitalization
 * Map variations of the same organization based on standardized names or other unique keys
-* Create a crosswalk table that aligns entities across multiple datasets (canonical key, raw name / aliases, sources, CIK ID, match type)
+* Create a crosswalk table that aligns entities across multiple datasets (canonical key, raw name / aliases, CIK ID, FED RSSD ID, sources,matching type, fuzzy matching score)
   * CIK (Central Index Key) is one way we can automatically match entities. They are used on the Securities Exchange Commission's (SEC) computer systems to identify corporations and individual people who have filed disclosure with the SEC.
+  * RSSD ID (Research, Statistics, Supervision, and Discount ID) is a unique number assigned by the Federal Reserve Board to financial institutions for identification in their data systems, acting as a distinct identifier for banks, holding companies, and other entities in the U.S. financial system. 
 
 ## Information About the Datasets
 * CIK.csv
@@ -31,48 +32,87 @@ The work is currently implemented and tested within a **Jupyter notebook** for s
   * Columns: "NAME", "NAMEHCR", "STALP", "STNAME", "BKCLASS", "ASSET", "CERT", "FED_RSSD", "org_name", "commented", "Commented", "mean_ASSET", "median_ASSET", "mean_ASSET_type", "median_ASSET_type"
 
 ## Current Progress
-* Created a dataframe of all the datasets merged together into all_names_df.
-  * 915289 entities
-  * Columns: "std_name" (this is the cleaned name), "raw_name", "cik", "source"
-* A crosswalk can be produced using the immediate matches from CIK IDs across the datasets. There are 133395 entities that match based on CIK IDs which ends up merging into 56760 rows in the dataframe. This leaves 781894 remaining rows to process
-* The next step is to separate the remaining rows and use exact matches based on the cleaned std_name. This creates 14708 clusters based on std_name name. Then these exact matches begin merging with the CIK clusters. 
-  * 759 existing clusters in the CIK crosswalk have the same std_name as the std_name cluster. 
-  * Merging these gives up a crosswalk based on cleaned standardized names and CIK ids with 70709 rows/clusters. 
+* Converted all files into pandas dataframes—cik_df, compustat_df, and fdic_df. 
+  * SEC_Institutions.csv no longer needs to be matched because it is a subset of CIK.csv
+* Created an empty dataframe called final_crosswalk_df where merged entities will be stored. 
+* Cleaned data within cik_df by merging entities together based on the same unique CIK ID. This reduced cik_df to 806225 entities after merging. Then this cleaned version is concated into final_crosswalk_df
+* Merged compustat_df into final_crosswalk_based on unique CIK IDs, leaving only 19 unmerged entities from compustat. 
+  * These remaining entities are concated into final_crosswalk_df as well. 
+* 
 
 ```bash
-| cik      | standardized_names                                                                           | aliases                                                                                                                          | sources       | match_type   | entity_id   |
-|:---------|:---------------------------------------------------------------------------------------------|:---------------------------------------------------------------------------------------------------------------------------------|:--------------|:-------------|:------------|
-| [1750.0] | aar                                                                                          | AAR CORP                                                                                                                         | compustat,cik | cik_cluster  | EN0000000   |
-| [1800.0] | abbott laboratories                                                                          | ABBOTT LABORATORIES                                                                                                              | compustat,cik | cik_cluster  | EN0000001   |
-| [1841.0] | abel noser bd|abel noser                                                                     | ABEL NOSER CORP                                         /BD|ABEL/NOSER CORP.                                                     | cik           | cik_cluster  | EN0000002   |
-| [1853.0] | aberdeen idaho mining|motivnation                                                            | ABERDEEN IDAHO MINING CO|MOTIVNATION, INC.                                                                                       | cik           | cik_cluster  | EN0000003   |
-| [1860.0] | thomson richard william bd|thomson                                                           | THOMSON RICHARD WILLIAM                                 /BD|THOMSON, RICHARD WILLIAM                                             | cik           | cik_cluster  | EN0000004   |
-| [1904.0] | abraham bd|abraham|abraham securities corporation                                            | ABRAHAM & CO INC                                        /BD|ABRAHAM & CO., INC.|ABRAHAM SECURITIES CORPORATION                   | cik           | cik_cluster  | EN0000005   |
-| [1918.0] | abrams|homeland securities financial services group|merchanthouse securities|wizer financial | ABRAMS, ALLAN EDWARD|HOMELAND SECURITIES FINANCIAL SERVICES GROUP, INC.|THE MERCHANTHOUSE SECURITIES, INC.|WIZER FINANCIAL. INC. | cik           | cik_cluster  | EN0000006   |
-| [1923.0] | servidyne|abrams industries                                                                  | SERVIDYNE INC|ABRAMS INDUSTRIES INC|SERVIDYNE, INC.                                                                              | compustat,cik | cik_cluster  | EN0000007   |
-| [1961.0] | worlds|academic computer systems|worlds com                                                  | WORLDS INC|ACADEMIC COMPUTER SYSTEMS INC|WORLDS COM INC|WORLDS.COM, INC.                                                         | compustat,cik | cik_cluster  | EN0000008   |
-| [2034.0] | aceto                                                                                        | ACETO CORP                                                                                                                       | compustat,cik | cik_cluster  | EN0000009   |
+                                    standardized_names  \
+9                                                  aar   
+11                                 abbott laboratories   
+19               abrams industries|servidyne|servidyne   
+23  academic computer systems|worlds com|worlds|worlds   
+28                                               aceto   
+
+                                                                                aliases  \
+9                                                                              AAR CORP   
+11                                                                  ABBOTT LABORATORIES   
+19                                  ABRAMS INDUSTRIES INC|SERVIDYNE, INC.|SERVIDYNE INC   
+23  ACADEMIC COMPUTER SYSTEMS INC|WORLDS COM INC|WORLDS INC|WORLDS.COM, INC.|WORLDS INC   
+28                                                                           ACETO CORP   
+
+     cik FED_RSSD        sources matching_type fuzzy_matching_score  
+9   1750      NaN  cik,compustat  cik_id_match                  NaN  
+11  1800      NaN  cik,compustat  cik_id_match                  NaN  
+19  1923      NaN  cik,compustat  cik_id_match                  NaN  
+23  1961      NaN  cik,compustat  cik_id_match                  NaN  
+28  2034      NaN  cik,compustat  cik_id_match                  NaN  
 ```
-* The last steps involve separating the remaining unprocessed rows to a new dataframe that need to be matched through a scoring-based algorithm. 
-  * There are 728657 remaining entities that need to go through this
-  * Matching algorithms to choose from:
-    * get_match_candidate_score from the regextable-python repository
-    * RapidFuzz algorithms including JaoWinkler.similarity or fuzz.token_set_ratio
-* The workflow for matching has been implemented which uses a union-find object to create sets of high match scoring entities and then retrieving the information of entities through their indices in the dataframe of unproccesed entities. 
+* The last steps involve merging fdic_df into final_crosswalk_df. Before fuzzy matching, exact standardized name matching is used. 
+  * Cleaned fdic_df by FED RSSD IDs which reduces the number of entities to 24,721. 
+  * Important: Before standardized name matching, there must be a separation of entities in fdic that are qualified to be matched based on an exact standardized_name match. The same standardized names with different FED RSSD IDs in enriched fdic do not qualify to be matched into final_crosswalk_df based on this method, because it is ambiguous as to which one matches the entity in final_crosswalk_df. The same goes for entities in final_crosswalk_df that have the same standardized name, but are known to be different. 
+  * After standardized name matching: 
+```bash
+            standardized_names  \
+749           bb t financial   
+3278  united california bank   
+3517             mellon bank   
+4769          rockland trust   
+5593        trust new jersey   
+
+                                                                                   aliases  \
+749                                     BB&T FINANCIAL CORP|BB&T FUNDS|BB&T Financial, FSB   
+3278  BANK OF THE WEST|SANWA BANK CALIFORNIA|UNITED CALIFORNIA BANK|UNITED CALIFORNIA BANK   
+3517                            MELLON BANK CORP|MELLON FINANCIAL CORP|Mellon Bank, F.S.B.   
+4769                                              ROCKLAND TRUST CO|Rockland Trust Company   
+5593                                TRUST CO OF NEW JERSEY|The Trust Company of New Jersey   
+
+        cik   FED_RSSD   sources                            matching_type  \
+749   13839  [2689463]  cik,fdic  cik_id_match,standardized_name_matching   
+3278  59951   [438368]  cik,fdic  cik_id_match,standardized_name_matching   
+3517  64782   [825904]  cik,fdic  cik_id_match,standardized_name_matching   
+4769  84616   [613008]  cik,fdic               standardized_name_matching   
+5593  99982    [31303]  cik,fdic               standardized_name_matching   
+
+     fuzzy_matching_score  
+749                   NaN  
+3278                  NaN  
+3517                  NaN  
+4769                  NaN  
+5593                  NaN  
+```
+* Now, fuzzy matching can be used for the qualified remaining entities that were not matched from fdic_df. 
+* Fuzzy matching information:
+  * Library: rapidfuzz 
+  * Function: fuzz.token_set_ratio
+  * score_cutoff = 90
 
 
 ## To-Do List
 
-* [ ] **Run the full program including fuzzy-matching**  
-  * There is currently a running time issue, as matching thousands of entities can take longer than a typical laptop can handle, so there needs to be improvements to time complexity or implement a logic for running the program in batches. 
+* [ ] **Duplicates Issue**  
+  * The workflow currently has a slight logic and type errors within the code that lead to some duplicated in IDs and there is missing FDIC data that needs to be adressed. 
 
 * [ ] **Check for duplicates**  
-  * Identify and remove duplicate standardized names after cleaning
+  * Identify and remove duplicate standardized names and IDs after matching
 
 * [ ] **Testing and validation**  
-  * Create test cases for all cleaning functions (`basicHash`, `corpHash`, `clean_fin_org_names`)
   * Verify edge cases of names with special characters, multiple suffixes, etc
-  * Evaluate performance and accuracy of the cleaning + fuzzy matching
+  * Evaluate performance and accuracy of the cleaning + fuzzy matching using hand matching
 
 ## requirements.txt
 
