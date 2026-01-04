@@ -41,71 +41,42 @@ The work is implemented and tested within a **Jupyter notebook** for simplied us
 * 
 
 ```bash
-                                    standardized_names  \
-9                                                  aar   
-11                                 abbott laboratories   
-19               abrams industries|servidyne|servidyne   
-23  academic computer systems|worlds com|worlds|worlds   
-28                                               aceto   
-
-                                                                                aliases  \
-9                                                                              AAR CORP   
-11                                                                  ABBOTT LABORATORIES   
-19                                  ABRAMS INDUSTRIES INC|SERVIDYNE, INC.|SERVIDYNE INC   
-23  ACADEMIC COMPUTER SYSTEMS INC|WORLDS COM INC|WORLDS INC|WORLDS.COM, INC.|WORLDS INC   
-28                                                                           ACETO CORP   
-
-     cik FED_RSSD        sources matching_type fuzzy_matching_score  
-9   1750      NaN  cik,compustat  cik_id_match                  NaN  
-11  1800      NaN  cik,compustat  cik_id_match                  NaN  
-19  1923      NaN  cik,compustat  cik_id_match                  NaN  
-23  1961      NaN  cik,compustat  cik_id_match                  NaN  
-28  2034      NaN  cik,compustat  cik_id_match                  NaN  
+                                           standardized_names                                                     aliases cik FED_RSSD sources matching_type fuzzy_matching_score
+0    defined asset funds municipal invt tr fd new york ser 33    DEFINED ASSET FUNDS MUNICIPAL INVT TR FD NEW YORK SER 33   3      NaN     cik           NaN                  NaN
+1       corporate income fund seventy ninth short term series       CORPORATE INCOME FUND SEVENTY NINTH SHORT TERM SERIES  13      NaN     cik           NaN                  NaN
+2   defined asset funds municipal invt tr fd mon pymt ser 155   DEFINED ASSET FUNDS MUNICIPAL INVT TR FD MON PYMT SER 155  14      NaN     cik           NaN                  NaN
+3   defined asset funds municipal invt tr fd mon pymt ser 156   DEFINED ASSET FUNDS MUNICIPAL INVT TR FD MON PYMT SER 156  17      NaN     cik           NaN                  NaN
+4  nuveen tax exempt unit trust series 169 national trust 169  NUVEEN TAX EXEMPT UNIT TRUST SERIES 169 NATIONAL TRUST 169  18      NaN     cik           NaN                  NaN
 ```
 * The last steps involve merging fdic_df into final_crosswalk_df. Before fuzzy matching, exact standardized name matching is used. 
   * Cleaned fdic_df by FED RSSD IDs which reduces the number of entities to 24,721. 
   * Important: Before standardized name matching, there must be a separation of entities in fdic that are qualified to be matched based on an exact standardized_name match. The same standardized names with different FED RSSD IDs in enriched fdic do not qualify to be matched into final_crosswalk_df based on this method, because it is ambiguous as to which one matches the entity in final_crosswalk_df. The same goes for entities in final_crosswalk_df that have the same standardized name, but are known to be different. 
-  * After standardized name matching: 
+  * After standardized name matching (Filtered to show entities that were matched): 
 ```bash
-            standardized_names  \
-749           bb t financial   
-3278  united california bank   
-3517             mellon bank   
-4769          rockland trust   
-5593        trust new jersey   
-
-                                                                                   aliases  \
-749                                     BB&T FINANCIAL CORP|BB&T FUNDS|BB&T Financial, FSB   
-3278  BANK OF THE WEST|SANWA BANK CALIFORNIA|UNITED CALIFORNIA BANK|UNITED CALIFORNIA BANK   
-3517                            MELLON BANK CORP|MELLON FINANCIAL CORP|Mellon Bank, F.S.B.   
-4769                                              ROCKLAND TRUST CO|Rockland Trust Company   
-5593                                TRUST CO OF NEW JERSEY|The Trust Company of New Jersey   
-
-        cik   FED_RSSD   sources                            matching_type  \
-749   13839  [2689463]  cik,fdic  cik_id_match,standardized_name_matching   
-3278  59951   [438368]  cik,fdic  cik_id_match,standardized_name_matching   
-3517  64782   [825904]  cik,fdic  cik_id_match,standardized_name_matching   
-4769  84616   [613008]  cik,fdic               standardized_name_matching   
-5593  99982    [31303]  cik,fdic               standardized_name_matching   
-
-     fuzzy_matching_score  
-749                   NaN  
-3278                  NaN  
-3517                  NaN  
-4769                  NaN  
-5593                  NaN  
+                      standardized_names                                                                      aliases     cik  FED_RSSD   sources               matching_type fuzzy_matching_score
+2300                      rockland trust                                     ROCKLAND TRUST CO|Rockland Trust Company   84616  [613008]  cik,fdic  standardized_name_matching                   []
+2735                    trust new jersey                       TRUST CO OF NEW JERSEY|The Trust Company of New Jersey   99982   [31303]  cik,fdic  standardized_name_matching                   []
+2799         united states national bank                      UNITED STATES NATIONAL BANK|United States National Bank  101712  [291068]  cik,fdic  standardized_name_matching                   []
+2800  united states national bank oregon  UNITED STATES NATIONAL BANK OF OREGON|United States National Bank of Oregon  101715  [373861]  cik,fdic  standardized_name_matching                   []
+3208            m i marshall ilsley bank                      M&I MARSHALL & ILSLEY BANK|M&I Marshall and Ilsley Bank  205571  [983448]  cik,fdic  standardized_name_matching                   [] 
 ```
 * Now, fuzzy matching can be used for the qualified remaining entities that were not matched from fdic_df. 
 * Fuzzy matching information:
   * Library: rapidfuzz 
   * Function: fuzz.token_set_ratio
   * score_cutoff = 90
+* Final Crosswalk:
+``` bash
+                                  standardized_names                                            aliases   cik  FED_RSSD sources matching_type fuzzy_matching_score  ineligible_name_matching
+0  defined asset funds municipal invt tr fd new y...  DEFINED ASSET FUNDS MUNICIPAL INVT TR FD NEW Y...   3.0       NaN     cik           NaN                   []                     False
+1  corporate income fund seventy ninth short term...  CORPORATE INCOME FUND SEVENTY NINTH SHORT TERM...  13.0       NaN     cik           NaN                   []                     False
+2  defined asset funds municipal invt tr fd mon p...  DEFINED ASSET FUNDS MUNICIPAL INVT TR FD MON P...  14.0       NaN     cik           NaN                   []                     False
+3  defined asset funds municipal invt tr fd mon p...  DEFINED ASSET FUNDS MUNICIPAL INVT TR FD MON P...  17.0       NaN     cik           NaN                   []                     False
+4  nuveen tax exempt unit trust series 169 nation...  NUVEEN TAX EXEMPT UNIT TRUST SERIES 169 NATION...  18.0       NaN     cik           NaN                   []                     False
+```
 
 
 ## To-Do List
-
-* [ ] **Duplicates Issue**  
-  * The workflow currently has a slight logic and type errors within the code that lead to some duplicated in IDs and there is missing FDIC data that needs to be adressed. 
 
 * [ ] **Check for duplicates**  
   * Identify and remove duplicate standardized names and IDs after matching
