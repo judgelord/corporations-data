@@ -205,16 +205,19 @@ enriched_fdic_df_exploded['standardized_names'] = (
 unqualified_for_standardized_names_matching_fdic = enriched_fdic_df_exploded['standardized_names'].duplicated(keep=False)
 qualified_for_standardized_names_matching__fdic_exploded = enriched_fdic_df_exploded[~unqualified_for_standardized_names_matching_fdic]
 
-unqualified_for_standardized_names_matching_final = final_crosswalk_df_exploded['standardized_names'].duplicated(keep=False)
-qualified_for_standardized_names_matching_final_exploded = final_crosswalk_df_exploded[~unqualified_for_standardized_names_matching_final]
+# Find duplicated rows for each column separately
+duplicated_cik_final = final_crosswalk_df_exploded["cik"].duplicated(keep=False)
+duplicated_names_final = final_crosswalk_df_exploded["standardized_names"].duplicated(keep=False)
 
+# Keep only rows where neither cik nor standardized_names are duplicated
+qualified_for_standardized_names_matching_final_exploded = final_crosswalk_df_exploded[~(duplicated_cik_final | duplicated_names_final)]
+
+# Unqualified = rows where either cik or standardized_names is duplicated
 # Keeping unqualified entities to be merged later
-unqualified_for_standardized_names_matching_final_exploded = (
-    final_crosswalk_df_exploded[unqualified_for_standardized_names_matching_final]
-)
+unqualified_for_standardized_names_matching_final_exploded = final_crosswalk_df_exploded[duplicated_cik_final | duplicated_names_final]
 grouped_by_cik_id = unqualified_for_standardized_names_matching_final_exploded.groupby('cik')
 confident_matches = []
-
+# Grouping the entities that can't be matched based on name back together on cik id. 
 for cik_value, group in grouped_by_cik_id:
     if len(group) > 1:
         # Aggregate the data based on cik
@@ -240,8 +243,9 @@ for cik_value, group in grouped_by_cik_id:
 pd.set_option('display.max_colwidth', None)
 unqualified_for_standardized_names_matching_final_df = pd.DataFrame(confident_matches)
 
-# qualified_for_standardized_names_matching_final_exploded['exploded_index'] = qualified_for_standardized_names_matching_final_exploded.index
-# qualified_for_standardized_names_matching__fdic_exploded['exploded_index'] = qualified_for_standardized_names_matching__fdic_exploded.index
+# This dataframe will be just later concated to the final data frame becasue they cannot be matched on names
+# add column for reason
+unqualified_for_standardized_names_matching_final_df['ineligible_name_matching'] = True
 
 overlap = final_crosswalk_df.columns.intersection(qualified_for_standardized_names_matching__fdic_exploded.columns)
 
@@ -420,8 +424,22 @@ enriched_fdic_df['FED_RSSD'] = (
 print("Adding entities that were not matched from fdic into final_crosswalk_df and entites from final_crosswalk_df that were\
       removed because they were not qualified for exact standardized name matching")
 remaining_fdic_df = enriched_fdic_df[~enriched_fdic_df['FED_RSSD'].isin(merged['FED_RSSD'])]
-final_crosswalk_df = pd.concat([merged, remaining_fdic_df], ignore_index=True)
-final_crosswalk_df = pd.concat([merged, unqualified_for_standardized_names_matching_final_df], ignore_index=True)
+
+final_crosswalk_df = pd.concat(
+    [
+        merged,
+        remaining_fdic_df,
+        unqualified_for_standardized_names_matching_final_df
+    ],
+    ignore_index=True
+)
+
+# Fill the NaNs and immediately cast to boolean
+final_crosswalk_df['ineligible_name_matching'] = (
+    final_crosswalk_df['ineligible_name_matching']
+    .fillna(False)
+    .astype(bool)
+)
  
 print("Exporting final_crosswalk_df into a csv file")
 final_crosswalk_df.to_csv(data_dir / 'final_crosswalk.csv', index=False)
