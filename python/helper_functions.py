@@ -195,6 +195,7 @@ def basicHash(s):
 
     return s
 
+
 # Function from Brad Hackinen's NAMA
 def corpHash(s):
     '''
@@ -211,6 +212,7 @@ def corpHash(s):
     s = re.sub(corp_re,'',s,count=1)
 
     return s
+
 
 # function to clean org names
 def clean_fin_org_names(name: str) -> str:
@@ -237,6 +239,26 @@ def clean_fin_org_names(name: str) -> str:
     return name
 
 
+def clean_corporate_suffix(name: str) -> str:
+    if name is None or not isinstance(name, str) or name == "NA":
+        return ""
+    
+    # Unicode & PDF cleanup
+    name = PDF_PATTERN_RE.sub("", name)
+    name = corp_simplify_utils.normalize_unicode(name)
+
+    # Remove corporate suffixes
+    name = CORP_SUFFIX_RE.sub("", name)
+
+    # Remove punctuations
+    name = PUNCT_RE.sub(" ", name)
+    
+    # Final cleanup of spaces
+    name = MULTISPACE_RE.sub(" ", name).strip().lower()
+
+    return name
+    
+    
 def normalize_to_list(x):
     if pd.isna(x):
         return []
