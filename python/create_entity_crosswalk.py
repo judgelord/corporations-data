@@ -172,7 +172,6 @@ for FED_RSSD_value, group in grouped_by_FED_RSSD:
         }
         confident_matches.append(unmatched_keys)
          
-pd.set_option('display.max_colwidth', None)
 enriched_fdic_df = pd.DataFrame(confident_matches)
 print(f"fdic_df reduced to {len(enriched_fdic_df)} entities after merging.")
 
@@ -202,10 +201,10 @@ enriched_fdic_df_exploded['standardized_names'] = (
     enriched_fdic_df_exploded['standardized_names'].str.strip()
 )
 
+# Find duplicated rows for each column separately
 unqualified_for_standardized_names_matching_fdic = enriched_fdic_df_exploded['standardized_names'].duplicated(keep=False)
 qualified_for_standardized_names_matching__fdic_exploded = enriched_fdic_df_exploded[~unqualified_for_standardized_names_matching_fdic]
 
-# Find duplicated rows for each column separately
 duplicated_cik_final = final_crosswalk_df_exploded["cik"].duplicated(keep=False)
 duplicated_names_final = final_crosswalk_df_exploded["standardized_names"].duplicated(keep=False)
 
