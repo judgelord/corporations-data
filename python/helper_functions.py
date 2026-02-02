@@ -214,8 +214,8 @@ def corpHash(s):
     return s
 
 
-# function to clean org names
-def clean_fin_org_names(name: str) -> str:
+# function to clean org names for exact standardized name matching
+def to_standardized_name(name: str) -> str:
     if name is None or not isinstance(name, str) or name == "NA":
         return ""
     
@@ -239,24 +239,53 @@ def clean_fin_org_names(name: str) -> str:
     return name
 
 
-def clean_corporate_suffix(name: str) -> str:
+# Function to clean aliases by removing corporation suffixes 
+# and other symbols for more accurate regular expression matching
+def clean_org_alias(name: str) -> str:
+    # if name is None or not isinstance(name, str) or name == "NA":
+    #     return ""
+    
+    # # Unicode & PDF cleanup
+    # name = PDF_PATTERN_RE.sub("", name)
+    # name = corp_simplify_utils.normalize_unicode(name)
+
+    # # Remove corporate suffixes
+    # name = CORP_SUFFIX_RE.sub("", name)
+
+    # # Remove punctuations
+    # name = PUNCT_RE.sub(" ", name)
+    
+    # # Final cleanup of spaces
+    # name = MULTISPACE_RE.sub(" ", name).strip().lower()
+
+    # return name
+    
     if name is None or not isinstance(name, str) or name == "NA":
         return ""
-    
+
     # Unicode & PDF cleanup
-    name = PDF_PATTERN_RE.sub("", name)
     name = corp_simplify_utils.normalize_unicode(name)
+    name = PDF_PATTERN_RE.sub("", name)
+
+    # normalizing to lowercase
+    name = name.lower()
 
     # Remove corporate suffixes
     name = CORP_SUFFIX_RE.sub("", name)
 
-    # Remove punctuations
-    name = PUNCT_RE.sub(" ", name)
-    
+    # Remove punctuation & symbol noise
+    # punc2_re already handles:
+    # () [] {} quotes, dashes, slashes, punctuation, unicode quotes
+    name = punc2_re.sub(" ", name)
+
+    # Normalize commas 
+    name = re.sub(r"\s*(?:,\s*)+", ", ", name)
+
     # Final cleanup of spaces
-    name = MULTISPACE_RE.sub(" ", name).strip().lower()
+    name = MULTISPACE_RE.sub(" ", name).strip()
 
     return name
+
     
     
 def normalize_to_list(x):

@@ -32,27 +32,27 @@ class TestOrgNameProcessing(unittest.TestCase):
         # Should handle internal "and" conversion via basicHash
         self.assertEqual(corpHash("A & B LLC"), "a and b")
 
-    # Tests for clean_fin_org_names
-    def test_clean_fin_org_names(self):
+    # Tests for to_standardized_name
+    def test_to_standardized_name(self):
         # Testing metadata stripping (comma)
-        self.assertEqual(clean_fin_org_names("Goldman Sachs, New York"), "goldman sachs")
+        self.assertEqual(to_standardized_name("Goldman Sachs, New York"), "goldman sachs")
         
         # Testing PDF pattern removal
-        self.assertEqual(clean_fin_org_names("Report 10 kb pdf"), "report")
+        self.assertEqual(to_standardized_name("Report 10 kb pdf"), "report")
         
         # Testing stopword and non-financial removal
         # "University" is in NON_FINANCIAL_ORG_TERMS
-        self.assertEqual(clean_fin_org_names("Stanford University"), "stanford")
+        self.assertEqual(to_standardized_name("Stanford University"), "stanford")
         
         # Test None/NA handling
-        self.assertEqual(clean_fin_org_names(None), "")
-        self.assertEqual(clean_fin_org_names("NA"), "")
+        self.assertEqual(to_standardized_name(None), "")
+        self.assertEqual(to_standardized_name("NA"), "")
 
     # Tests for clean_corporate_suffix
-    def test_clean_corporate_suffix(self):
-        self.assertEqual(clean_corporate_suffix("Apple Inc."), "apple")
-        self.assertEqual(clean_corporate_suffix("Micro-soft Corp"), "micro-soft")
-        self.assertEqual(clean_corporate_suffix("AIR, A SERIES OF HUMANITY EQUITY, LLC"),
+    def test_clean_org_alias(self):
+        self.assertEqual(clean_org_alias("Apple Inc."), "apple")
+        self.assertEqual(clean_org_alias("Micro-soft Corp"), "micro soft")        
+        self.assertEqual(clean_org_alias("AIR, A SERIES OF HUMANITY EQUITY, LLC"),
                                                 "air a series of humanity equity")
 
     # Tests for normalize_to_list
