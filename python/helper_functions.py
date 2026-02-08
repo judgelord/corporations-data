@@ -287,6 +287,44 @@ def clean_org_alias(name: str) -> str:
     return name
 
     
+def CIK_merge_cleaup(df: pd.DataFrame, alias_column_name: str, source: str) -> None:
+    mask = df['_merge'] == 'both'
+
+    # add new standardized_names
+    standardized_names = df['standardized_names'].astype('string')
+    new_standardized_name = df['std_name'].astype('string')
+
+    df['standardized_names'] = standardized_names.where(
+        new_standardized_name.isna() | (standardized_names == new_standardized_name),
+        standardized_names + '|' + new_standardized_name
+    ).fillna(new_standardized_name)
+
+    # add new alias
+    aliases = df['aliases'].astype('string')
+    new_alias = df[alias_column_name].astype('string')
+
+    df['aliases'] = aliases.where(
+        new_alias.isna() | (aliases == new_alias),
+        aliases + '|' + new_alias
+    ).fillna(new_alias)
+
+    # add the source compustat
+    df.loc[mask, 'sources'] = (
+        df.loc[mask, 'sources']
+        .fillna('')
+        .where(
+            df.loc[mask, 'sources'] == '',
+            df.loc[mask, 'sources'] + ','
+        )
+        + source
+    )
+
+    # add the entity is matched by cik_id_match
+    df.loc[
+        mask,
+        'matching_type'
+    ] = 'cik_id_match'
+    
     
 def normalize_to_list(x):
     if pd.isna(x):

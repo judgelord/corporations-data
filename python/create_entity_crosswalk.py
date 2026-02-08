@@ -1,7 +1,4 @@
-from helper_functions import to_standardized_name
-from helper_functions import normalize_to_list
-from helper_functions import clean_cik
-from helper_functions import clean_org_alias
+from helper_functions import *
 from rapidfuzz import process, fuzz
 import os
 from pathlib import Path
@@ -43,7 +40,8 @@ duplicates_cik_id = cik_df['cik'].duplicated(keep = False)
 duplicates_cik = cik_df[duplicates_cik_id]
 
 # This is the final dataframe crosswalk where we will be merging entities into. 
-cols = ['aliases', 'standardized_names', 'clean_alias', 'cik', 'FED_RSSD', 'sources', 'matching_type', 'fuzzy_matching_score']
+cols = ['aliases', 'standardized_names', 'clean_alias', 'cik', 'FED_RSSD', 'sources', 
+        'matching_type', 'fuzzy_matching_score']
 final_crosswalk_df = pd.DataFrame(columns = cols)
 
 # -----------------------------------------------------------------
@@ -97,51 +95,27 @@ temp_compustat_df.loc[:, 'cik'] = temp_compustat_df['cik'].apply(clean_cik)
 final_crosswalk_df.loc[:, 'cik'] = final_crosswalk_df['cik'].apply(clean_cik)
 
 # Merge compustat_df into final_crosswalk_df based on cik id. 
-final_crosswalk_df = final_crosswalk_df.merge(temp_compustat_df, on = 'cik', how = 'left', suffixes=('','_other'), indicator=True)
+final_crosswalk_df = final_crosswalk_df.merge(temp_compustat_df, on = 'cik', how = 'left', 
+                                              suffixes=('','_other'), indicator=True)
 print("Successfully merged compustat into final_crosswalk_df based on cik id")
 
 # Clean up final_crosswalk_df
-mask = final_crosswalk_df['_merge'] == 'both'
-
-# add new standardized_names
-standardized_names = final_crosswalk_df['standardized_names'].astype('string')
-new_standardized_name = final_crosswalk_df['std_name'].astype('string')
-
-final_crosswalk_df['standardized_names'] = standardized_names.where(
-    new_standardized_name.isna() | (standardized_names == new_standardized_name),
-    standardized_names + '|' + new_standardized_name
-).fillna(new_standardized_name)
-
-# add new alias
-aliases = final_crosswalk_df['aliases'].astype('string')
-new_alias = final_crosswalk_df['conm'].astype('string')
-
-final_crosswalk_df['aliases'] = aliases.where(
-    new_alias.isna() | (aliases == new_alias),
-    aliases + '|' + new_alias
-).fillna(new_alias)
-
-# add the source compustat
-final_crosswalk_df.loc[mask, 'sources'] = (
-    final_crosswalk_df.loc[mask, 'sources']
-    .fillna('')
-    .where(
-        final_crosswalk_df.loc[mask, 'sources'] == '',
-        final_crosswalk_df.loc[mask, 'sources'] + ','
-    )
-    + 'compustat'
-)
-
-# add the entity is matched by cik_id_match
-final_crosswalk_df.loc[
-    mask,
-    'matching_type'
-] = 'cik_id_match'
-
-# Cleaning up final_crosswalk_df
-
+CIK_merge_cleaup(final_crosswalk_df, "conm", "compustat")
+# Cleaning up final_crosswalk_df columns
 final_crosswalk_df = final_crosswalk_df.drop(columns=['Unnamed: 0','gvkey', 'conm', 'tic', 'cusip', 'sic', \
-                                                      'naics', 'gsubind', 'gind', 'year1', 'year2', 'std_name', '_merge', 'clean_alias_other'])
+                                                      'naics', 'gsubind', 'gind', 'year1', 'year2', 'std_name', 
+                                                      '_merge', 'clean_alias_other'])
+
+# Merge sec_df into final_crosswalk_df based on cik id. 
+sec_df = sec_df.rename(columns = {'CIK': 'cik'})
+sec_df.loc[:, 'cik'] = sec_df['cik'].apply(clean_cik)
+final_crosswalk_df = final_crosswalk_df.merge(sec_df, on = 'cik', how = 'left', suffixes=('','_other'), indicator=True)
+CIK_merge_cleaup (final_crosswalk_df, "Name", "sec")
+
+final_crosswalk_df = final_crosswalk_df.drop(columns=['Ticker', 'index', 'Name', 'Exchange', 'SIC', 
+                                                      'Business', 'Incorporated', 'IRS', 'std_name', '_merge'])
+
+
 
 # Create a dataframe of entities that were not merged called remaining_compustat_df 
 rejected_compustat_df = temp_compustat_df[~temp_compustat_df['cik'].isin(final_crosswalk_df['cik'])].reset_index(drop=True)
