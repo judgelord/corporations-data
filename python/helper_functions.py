@@ -286,8 +286,9 @@ def clean_org_alias(name: str) -> str:
 
     return name
 
-    
-def CIK_merge_cleaup(df: pd.DataFrame, alias_column_name: str, source: str) -> None:
+
+def CIK_merge_cleaup(df: pd.DataFrame, alias_column_name: str, source_name: str, 
+                     ticker_column_name: str, naics_column_name = "") -> None:
     mask = df['_merge'] == 'both'
 
     # add new standardized_names
@@ -307,17 +308,36 @@ def CIK_merge_cleaup(df: pd.DataFrame, alias_column_name: str, source: str) -> N
         new_alias.isna() | (aliases == new_alias),
         aliases + '|' + new_alias
     ).fillna(new_alias)
+    
+    # add new ticker if it is empty 
+    tickers = df['ticker'].astype('string')
+    new_tickers = df[ticker_column_name].astype('string')
+    df['ticker'] = tickers.where(
+        new_alias.isna() | (tickers == new_tickers),
+        tickers + '|' + new_tickers
+    ).fillna(new_tickers)
 
     # add the source compustat
     df.loc[mask, 'sources'] = (
         df.loc[mask, 'sources']
         .fillna('')
+        .astype(str)  # <--- Add this line
         .where(
-            df.loc[mask, 'sources'] == '',
-            df.loc[mask, 'sources'] + ','
+            (df.loc[mask, 'sources'].fillna('') == ''),
+            df.loc[mask, 'sources'].astype(str) + ','
         )
-        + source
+        + source_name
     )
+    
+    if naics_column_name != "":
+        naics = df['naics'].astype('Int64').astype('string').replace("<NA>", pd.NA)
+        new_naices = df[naics_column_name].astype('Int64').astype('string').replace("<NA>", pd.NA)
+        new_naices = df[naics_column_name].astype('Int64')
+        new_naices = df[naics_column_name].astype(str)
+        df['naics'] = naics.where(
+            new_naices.isna() | (naics == new_naices),
+            naics + '|' + new_naices
+        ).fillna(new_naices)
 
     # add the entity is matched by cik_id_match
     df.loc[

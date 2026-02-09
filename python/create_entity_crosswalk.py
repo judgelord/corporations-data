@@ -26,6 +26,7 @@ print("Cleaning file names for standardized name matching...")
 compustat_df['std_name'] = compustat_df['conm'].apply(to_standardized_name)
 fdic_df['std_name'] = fdic_df['NAME'].apply(to_standardized_name)
 cik_df['std_name'] = cik_df['company_name'].apply(to_standardized_name)
+sec_df['std_name'] = sec_df['Name'].apply(to_standardized_name)
 print("Done creating standardized names")
 
 print("Cleaning file names for R package regular expression matching...")
@@ -40,7 +41,7 @@ duplicates_cik_id = cik_df['cik'].duplicated(keep = False)
 duplicates_cik = cik_df[duplicates_cik_id]
 
 # This is the final dataframe crosswalk where we will be merging entities into. 
-cols = ['aliases', 'standardized_names', 'clean_alias', 'cik', 'FED_RSSD', 'sources', 
+cols = ['aliases', 'standardized_names', 'clean_alias', 'cik', 'FED_RSSD', 'ticker', 'naics', 'sources', 
         'matching_type', 'fuzzy_matching_score']
 final_crosswalk_df = pd.DataFrame(columns = cols)
 
@@ -100,21 +101,22 @@ final_crosswalk_df = final_crosswalk_df.merge(temp_compustat_df, on = 'cik', how
 print("Successfully merged compustat into final_crosswalk_df based on cik id")
 
 # Clean up final_crosswalk_df
-CIK_merge_cleaup(final_crosswalk_df, "conm", "compustat")
+CIK_merge_cleaup(final_crosswalk_df, "conm", "compustat", "tic", naics_column_name = "naics")
 # Cleaning up final_crosswalk_df columns
-final_crosswalk_df = final_crosswalk_df.drop(columns=['Unnamed: 0','gvkey', 'conm', 'tic', 'cusip', 'sic', \
-                                                      'naics', 'gsubind', 'gind', 'year1', 'year2', 'std_name', 
-                                                      '_merge', 'clean_alias_other'])
+final_crosswalk_df = final_crosswalk_df.drop(columns=['Unnamed: 0','gvkey', 'conm', 'cusip', 'sic', 'tic',\
+                                                      'gsubind', 'gind', 'year1', 'year2', 'std_name', 
+                                                      '_merge', 'clean_alias_other', 'naics_other'])
 
 # Merge sec_df into final_crosswalk_df based on cik id. 
 sec_df = sec_df.rename(columns = {'CIK': 'cik'})
 sec_df.loc[:, 'cik'] = sec_df['cik'].apply(clean_cik)
 final_crosswalk_df = final_crosswalk_df.merge(sec_df, on = 'cik', how = 'left', suffixes=('','_other'), indicator=True)
-CIK_merge_cleaup (final_crosswalk_df, "Name", "sec")
+CIK_merge_cleaup(final_crosswalk_df, "Name", "sec", "Ticker")
 
 final_crosswalk_df = final_crosswalk_df.drop(columns=['Ticker', 'index', 'Name', 'Exchange', 'SIC', 
-                                                      'Business', 'Incorporated', 'IRS', 'std_name', '_merge'])
+                                                      'Business', 'Incorporated', 'IRS', '_merge', 'std_name'])
 
+# TODO: fix below logic based on the changes made here
 
 
 # Create a dataframe of entities that were not merged called remaining_compustat_df 
