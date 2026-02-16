@@ -316,6 +316,7 @@ def CIK_merge_cleaup(df: pd.DataFrame, alias_column_name: str, source_name: str,
         new_alias.isna() | (tickers == new_tickers),
         tickers + '|' + new_tickers
     ).fillna(new_tickers)
+    df['ticker'] = df['ticker'].replace(['nan', '<NA>', ''], np.nan)
 
     # add the source compustat
     df.loc[mask, 'sources'] = (
