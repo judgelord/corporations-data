@@ -330,11 +330,11 @@ def CIK_merge_cleaup(df: pd.DataFrame, alias_column_name: str, source_name: str,
     )
     
     if naics_column_name != "":
-    # 1. Standardize to integers first (to drop decimals), then strings
-        old = df['naics'].fillna(0).astype(int).astype(str).replace('0', '')
-        new = df[naics_column_name].fillna(0).astype(int).astype(str).replace('0', '')
+        # Remove '.0', handle 'nan' strings
+        # Use regex to only strip '.0' from the end of the string
+        old = df['naics'].astype(str).str.replace(r'\.0$', '', regex=True).replace('nan', '')
+        new = df[naics_column_name].astype(str).str.replace(r'\.0$', '', regex=True).replace('nan', '')
 
-        # 2. Define the conditions
         conditions = [
             (old != "") & (new != "") & (old != new), # Both exist and differ: Combine
             (old == "") & (new != ""),                # Old is empty: Take New
@@ -345,9 +345,11 @@ def CIK_merge_cleaup(df: pd.DataFrame, alias_column_name: str, source_name: str,
             new
         ]
 
-        # default is to keep 'old' if no conditions are met)
         df['naics'] = np.select(conditions, choices, default=old)
-    
+
+        # Convert empty strings back to true NaN
+        df['naics'] = df['naics'].replace('', np.nan)
+        
     # add the entity is matched by cik_id_match
     df.loc[
         mask,
