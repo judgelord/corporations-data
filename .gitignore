@@ -1,7 +1,7 @@
 # csv files / Rdata files
 *.csv
 *.Rdata
-*.DS_store
+*.DS_Store
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
