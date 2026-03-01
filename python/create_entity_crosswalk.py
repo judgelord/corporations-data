@@ -105,7 +105,7 @@ CIK_merge_cleaup(final_crosswalk_df, "conm", "compustat", "tic", naics_column_na
 # Cleaning up final_crosswalk_df columns
 final_crosswalk_df = final_crosswalk_df.drop(columns=['Unnamed: 0','gvkey', 'conm', 'cusip', 'sic', 'tic',\
                                                       'gsubind', 'gind', 'year1', 'year2', 'std_name', 
-                                                      '_merge', 'clean_alias_other', 'naics_other'])
+                                                      '_merge', 'naics_other'])
 
 # Merge sec_df into final_crosswalk_df based on cik id. 
 sec_df = sec_df.rename(columns = {'CIK': 'cik'})
@@ -325,7 +325,6 @@ print("Identifying the remaining qualified entities from fdic that were not merg
 qualified_for_fuzzy_matching = qualified_for_standardized_names_matching__fdic_exploded[\
     ~qualified_for_standardized_names_matching__fdic_exploded['standardized_names']\
     .isin(merged['standardized_names'])].reset_index(drop = True) 
-
 
 # Create a testing mode to sample data for faster fuzzy matching
 TESTING_MODE = True
