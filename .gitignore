@@ -1,6 +1,7 @@
 # csv files / Rdata files
 *.csv
 *.Rdata
+*.Rhistory
 *.DS_Store
 
 # Byte-compiled / optimized / DLL files
