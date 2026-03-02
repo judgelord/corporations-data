@@ -45,28 +45,30 @@ The work is implemented and tested within a **Jupyter notebook** for simplied us
   * Library: rapidfuzz 
   * Function: fuzz.token_set_ratio
   * score_cutoff = 90
-* Final Crosswalk (cleaned with only columns ['aliases', 'cik', 'FED_RSSD', 'ticker', 'naics', 'sources']):
+* Final crosswalk example (Filtered with only these columns ['aliases', 'cik', 'FED_RSSD', 'ticker', 'naics', 'sources']):
 ``` bash
-                                             aliases  \
-0  DEFINED ASSET FUNDS MUNICIPAL INVT TR FD NEW Y...   
-1  CORPORATE INCOME FUND SEVENTY NINTH SHORT TERM...   
-2  DEFINED ASSET FUNDS MUNICIPAL INVT TR FD MON P...   
-3  DEFINED ASSET FUNDS MUNICIPAL INVT TR FD MON P...   
-4  NUVEEN TAX EXEMPT UNIT TRUST SERIES 169 NATION...   
-
-                                  standardized_names   cik  FED_RSSD ticker  \
-0  defined asset funds municipal invt tr fd new y...   3.0       NaN    NaN   
-1  corporate income fund seventy ninth short term...  13.0       NaN    NaN   
-2  defined asset funds municipal invt tr fd mon p...  14.0       NaN    NaN   
-3  defined asset funds municipal invt tr fd mon p...  17.0       NaN    NaN   
-4  nuveen tax exempt unit trust series 169 nation...  18.0       NaN    NaN   
-
-   naics sources matching_type fuzzy_matching_score  ineligible_name_matching  
-0    NaN     cik           NaN                   []                     False  
-1    NaN     cik           NaN                   []                     False  
-2    NaN     cik           NaN                   []                     False  
-3    NaN     cik           NaN                   []                     False  
-4    NaN     cik           NaN                   []                     False  
+                                             aliases     cik  FED_RSSD ticker  
+0  DEFINED ASSET FUNDS MUNICIPAL INVT TR FD NEW Y...     3.0       NaN    NaN   
+1  CORPORATE INCOME FUND SEVENTY NINTH SHORT TERM...    13.0       NaN    NaN   
+2  DEFINED ASSET FUNDS MUNICIPAL INVT TR FD MON P...    14.0       NaN    NaN   
+3  DEFINED ASSET FUNDS MUNICIPAL INVT TR FD MON P...    17.0       NaN    NaN   
+4  NUVEEN TAX EXEMPT UNIT TRUST SERIES 169 NATION...    18.0       NaN    NaN   
+5  K TRON INTERNATIONAL INC|K Tron International Inc    20.0       NaN   KTII   
+6                 NEW YORK MUNICIPAL TRUST SERIES 15    49.0       NaN    NaN   
+7                                            UC CORP    51.0       NaN    NaN   
+8                                    FNW BANCORP INC    63.0       NaN    NaN   
+9                                  AAR CORP|Aar Corp  1750.0       NaN    AIR   
+      naics            sources  
+0       NaN                cik  
+1       NaN                cik  
+2       NaN                cik  
+3       NaN                cik  
+4       NaN                cik  
+5       NaN            cik,sec  
+6       NaN                cik  
+7       NaN                cik  
+8       NaN                cik  
+9  423860.0  cik,compustat,sec  
 ```
 
 ## To-Do List
