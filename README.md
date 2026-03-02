@@ -1,10 +1,10 @@
 # Organization Name Standardization Process
 
 ## Overview
-This Python project develops a process for **standardizing raw organizational names** to improve **entity matching** across multiple datasets. By using a combination of **string cleaning**, **regular expressions**, and **hashing functions**, the goal is to create a large **crosswalk table**
+This Python project develops a process for **standardizing raw organizational names** to improve **entity matching** across multiple datasets. By using a combination of **string cleaning**, **regular expressions**, and **hashing functions**, the goal is to create a large **crosswalk table** of corporations to be used for a regular expression matching package built in R. You can find that package here: [corporations](https://github.com/judgelord/corporations). 
 
-The work is implemented and tested within a **Jupyter notebook** for simplied use. The full script can also be run in a .py file. 
-> Note: This python script is currently under version 1 of development. There could be errors around false matches, etc. 
+The work is implemented and tested both on **Jupyter notebooks** (for simplied use) and a full Python script.  
+> Note: This python script is constatnly under development to improve matching. There could be errors around false matches, etc. 
 
 ---
 
