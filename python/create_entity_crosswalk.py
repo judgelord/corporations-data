@@ -327,7 +327,7 @@ qualified_for_fuzzy_matching = qualified_for_standardized_names_matching__fdic_e
     .isin(merged['standardized_names'])].reset_index(drop = True) 
 
 # Create a testing mode to sample data for faster fuzzy matching
-TESTING_MODE = True
+TESTING_MODE = False
 SAMPLE_FRAC = 0.01 # choose percent of data to sample in testing mode
 
 if TESTING_MODE:
