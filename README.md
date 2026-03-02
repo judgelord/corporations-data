@@ -1,4 +1,4 @@
-# Organization Name Standardization Process
+# Corporation Crosswalk Lookup Table 
 
 ## Overview
 This Python project develops a process for **standardizing raw organizational names** to improve **entity matching** across multiple datasets. By using a combination of **string cleaning**, **regular expressions**, and **hashing functions**, the goal is to create a large **crosswalk table** of corporations to be used for a regular expression matching package built in R. You can find that package here: [corporations](https://github.com/judgelord/corporations). 
